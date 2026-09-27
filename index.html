@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>찐학원 - 진짜 다녀본 학생·학부모 검증 리뷰</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; }
+    /* Tailwind 기본 스타일이 지도 타일 이미지를 깨뜨리는 문제 방지 */
+    .leaflet-container img { max-width: none !important; max-height: none !important; }
+    .leaflet-container { font-family: inherit; }
+    .map-wrap { position: relative; z-index: 0; isolation: isolate; }
+    .zzin-pin {
+      width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      background: #4f46e5; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .zzin-pin span { transform: rotate(45deg); color: #fff; font-weight: 900; font-size: 13px; }
+    #modal-dialog { max-height: min(88vh, 860px); }
+    .drop-active { border-color: #6366f1 !important; background: #eef2ff !important; }
+
+    /* ---------- 리뷰 폼: 네이버 리뷰식 선택 칩 ---------- */
+    .chip {
+      border: 1px solid #e5e7eb; background: #fff; color: #374151;
+      border-radius: 9999px; padding: 6px 12px; font-size: 12px; font-weight: 600;
+      line-height: 1.3; transition: background .15s, border-color .15s, color .15s;
+    }
+    .chip:hover { border-color: #a5b4fc; }
+    .chip[aria-pressed="true"] { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+    .chip.seg { flex: 1; border-radius: 10px; padding: 8px 4px; text-align: center; }
+    .chip.box { border-radius: 12px; padding: 9px 8px; text-align: center; }
+    .form-sec { border-top: 1px solid #f3f4f6; padding-top: 18px; }
+    .form-sec:first-child { border-top: 0; padding-top: 0; }
+    .sec-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: #111827; margin-bottom: 12px; }
+    .sec-num { width: 22px; height: 22px; border-radius: 9999px; background: #4f46e5; color: #fff; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; }
+    .q-label { display: block; font-weight: 700; color: #374151; margin-bottom: 6px; }
+    .flash { animation: flash 1.2s ease; border-radius: 12px; }
+    @keyframes flash { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } 25% { box-shadow: 0 0 0 3px rgba(239,68,68,.5); } }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 pb-12">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a id="logo-link" href="#" class="flex items-center space-x-2">
+        <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-md">찐</div>
+        <span class="text-2xl font-black tracking-tight text-gray-900">찐학원 <span class="text-xs text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">WEB</span></span>
+      </a>
+      <button onclick="openModal(event)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-sm flex items-center space-x-1.5 transition shadow-sm">
+        <i class="fa-solid fa-feather"></i>
+        <span>수강 인증 리뷰 쓰기</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 pt-6">
+
+    <!-- ================= 목록 화면 ================= -->
+    <section id="list-view">
+
+      <!-- Hero / Reward Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white mb-6 shadow-xl relative overflow-hidden border border-slate-800">
+        <div class="relative z-10 max-w-xl">
+          <div class="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-300 text-xs font-bold px-3 py-1 rounded-full border border-indigo-500/30 mb-3">
+            <i class="fa-solid fa-certificate text-amber-400"></i>
+            100% 1개월 이상 실수강 인증제
+          </div>
+          <h1 class="text-2xl font-black mb-2 leading-tight">가짜 후기 없는 진짜 학원 찾기, <span class="text-indigo-400">찐학원</span></h1>
+          <p class="text-gray-300 text-sm mb-4">한 달 수강증/영수증 인증하고 기프티콘 받아가세요!</p>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <span class="bg-white/10 backdrop-blur px-3 py-1.5 rounded-lg flex items-center gap-1.5 border border-white/10">
+              <i class="fa-solid fa-gift text-pink-400"></i> 학생: 올리브영 기프티콘 10,000원
+            </span>
+            <span class="bg-white/10 backdrop-blur px-3 py-1.5 rounded-lg flex items-center gap-1.5 border border-white/10">
+              <i class="fa-solid fa-mug-hot text-amber-300"></i> 학부모: 스타벅스 아메리카노
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 mb-6 shadow-sm space-y-4">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-gray-400"></i>
+          <input id="search-input" type="text" placeholder="학원명, 지역(대치동, 목동) 검색..." class="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium">
+        </div>
+        <div>
+          <div class="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><i class="fa-solid fa-user-graduate"></i> 대상 (학년)</div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="setFilter('grade','all',this)" class="grade-btn bg-indigo-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition">전체 학년</button>
+            <button onclick="setFilter('grade','초등',this)" class="grade-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition">초등</button>
+            <button onclick="setFilter('grade','중등',this)" class="grade-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition">중등</button>
+            <button onclick="setFilter('grade','고등',this)" class="grade-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition">고등</button>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><i class="fa-solid fa-book"></i> 과목</div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="setFilter('subject','all',this)" class="subject-btn bg-indigo-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition">전체 과목</button>
+            <button onclick="setFilter('subject','수학',this)" class="subject-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition">수학</button>
+            <button onclick="setFilter('subject','영어',this)" class="subject-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition">영어</button>
+            <button onclick="setFilter('subject','국어',this)" class="subject-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition">국어</button>
+            <button onclick="setFilter('subject','과학',this)" class="subject-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition">과학</button>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><i class="fa-solid fa-star"></i> 별점</div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="setFilter('rating',0,this)" class="rating-btn bg-indigo-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition">전체 별점</button>
+            <button onclick="setFilter('rating',3.5,this)" class="rating-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-star text-amber-400 mr-0.5"></i>3.5 이상</button>
+            <button onclick="setFilter('rating',4.0,this)" class="rating-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-star text-amber-400 mr-0.5"></i>4.0 이상</button>
+            <button onclick="setFilter('rating',4.5,this)" class="rating-btn bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3.5 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-star text-amber-400 mr-0.5"></i>4.5 이상</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 학원 위치 지도 -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 mb-6 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-gray-800 flex items-center gap-1.5"><i class="fa-solid fa-map-location-dot text-indigo-600"></i> 학원 위치 한눈에 보기</h2>
+          <span id="map-count" class="text-xs text-gray-400"></span>
+        </div>
+        <div class="map-wrap rounded-xl overflow-hidden border border-gray-200">
+          <div id="overview-map" style="height: 300px;"></div>
+        </div>
+        <p class="text-[11px] text-gray-400 mt-2">핀을 누르면 학원 정보가 나오고, 상세 페이지를 새 창으로 열 수 있습니다.</p>
+      </div>
+
+      <div id="academy-list" class="space-y-6"></div>
+
+      <div id="no-results" class="hidden bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-500">
+        <i class="fa-solid fa-filter-circle-xmark text-4xl text-gray-300 mb-3"></i>
+        <p class="text-sm font-bold">선택하신 조건에 맞는 학원이 없습니다.</p>
+        <p class="text-xs text-gray-400 mt-1">검색어를 바꾸거나 학년·과목·별점 조건을 바꿔 주세요.</p>
+      </div>
+    </section>
+
+    <!-- ================= 학원 상세 화면 ================= -->
+    <section id="detail-view" class="hidden"></section>
+
+  </main>
+
+  <!-- ================= 리뷰 작성 모달 ================= -->
+  <div id="review-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto hidden" onclick="if(event.target===this)closeModal()">
+    <div id="modal-dialog" class="absolute left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg bg-white rounded-2xl overflow-y-auto p-6 shadow-2xl">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600" aria-label="닫기">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+
+      <div id="form-wrap">
+        <h3 class="text-xl font-bold text-gray-900 mb-1">한 달 실수강 인증 후기 작성</h3>
+        <p class="text-xs text-gray-500 mb-6">대부분 골라서 누르기만 하면 돼요. 2~3분이면 끝나요.</p>
+
+        <form id="review-form" onsubmit="submitReview(event)" class="space-y-6 text-xs" novalidate>
+
+          <!-- ① 작성자 · 수강 정보 -->
+          <section class="form-sec space-y-4">
+            <div class="sec-title"><span class="sec-num">1</span>작성자 · 수강 정보</div>
+
+            <div>
+              <span class="q-label">작성자 구분 *</span>
+              <div class="grid grid-cols-2 gap-2">
+                <label class="border border-gray-200 rounded-xl p-3 flex items-center space-x-2 cursor-pointer hover:border-indigo-500 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50">
+                  <input type="radio" name="user_type" value="student" checked class="text-indigo-600">
+                  <div>
+                    <div class="font-bold text-gray-800">학생 (재원생)</div>
+                    <div class="text-[10px] text-indigo-600">🎁 올리브영 1만원</div>
+                  </div>
+                </label>
+                <label class="border border-gray-200 rounded-xl p-3 flex items-center space-x-2 cursor-pointer hover:border-indigo-500 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50">
+                  <input type="radio" name="user_type" value="parent" class="text-indigo-600">
+                  <div>
+                    <div class="font-bold text-gray-800">학부모</div>
+                    <div class="text-[10px] text-amber-600">☕ 스벅 아메리카노</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label for="academy-select" class="q-label">다닌 학원 *</label>
+              <select id="academy-select" class="w-full border border-gray-200 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="region-input" class="q-label">지역 *</label>
+                <input id="region-input" list="region-list" placeholder="예) 서울 대치동" class="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <datalist id="region-list"></datalist>
+              </div>
+              <div>
+                <label for="school-grade" class="q-label" data-s="내 학년 *" data-p="자녀 학년 *">내 학년 *</label>
+                <select id="school-grade" class="w-full border border-gray-200 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                  <option value="">학년 선택</option>
+                  <optgroup label="초등"><option>초1</option><option>초2</option><option>초3</option><option>초4</option><option>초5</option><option>초6</option></optgroup>
+                  <optgroup label="중등"><option>중1</option><option>중2</option><option>중3</option></optgroup>
+                  <optgroup label="고등"><option>고1</option><option>고2</option><option>고3</option></optgroup>
+                  <optgroup label="기타"><option>N수생</option></optgroup>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <span class="q-label">수강 과목 * <span class="font-normal text-gray-400">(최대 3개)</span></span>
+              <div id="g-subjects" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <div>
+              <span class="q-label">수강 기간 *</span>
+              <div id="g-period" class="grid grid-cols-4 gap-1.5"></div>
+            </div>
+          </section>
+
+          <!-- ② 수강 증빙 -->
+          <section class="form-sec">
+            <div class="sec-title"><span class="sec-num">2</span>수강 증빙 첨부 *</div>
+            <label id="drop-zone" for="receipt-input" class="block border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-indigo-400 transition cursor-pointer bg-gray-50">
+              <i class="fa-solid fa-cloud-arrow-up text-xl text-gray-400 mb-1"></i>
+              <div class="text-gray-600 font-medium">1개월 이상 영수증 / 수강증 / 출석부 (학원명·결제일 필수)</div>
+              <div class="text-[10px] text-gray-400 mt-1">눌러서 선택하거나 끌어다 놓기 · JPG/PNG/PDF · 최대 3장</div>
+            </label>
+            <input id="receipt-input" type="file" accept="image/*,application/pdf" multiple class="hidden">
+            <div id="receipt-previews" class="grid grid-cols-3 gap-2 mt-2"></div>
+            <p class="text-[10px] text-gray-400 mt-1.5"><i class="fa-solid fa-lock mr-1"></i>카드번호 등 민감한 정보는 가리고 올려주세요. 증빙 사진은 검수에만 쓰이고 공개되지 않습니다.</p>
+          </section>
+
+          <!-- ③ 수업 평가 -->
+          <section class="form-sec space-y-4">
+            <div class="sec-title"><span class="sec-num">3</span>수업은 어땠나요?</div>
+
+            <div id="eval-rows" class="space-y-2.5"></div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="q-label !mb-0">선생님은 어떤 스타일인가요? *</span>
+                <span id="count-teacherTags" class="text-[11px] text-gray-400 font-bold px-1.5 rounded"></span>
+              </div>
+              <p class="text-[10px] text-gray-400 mb-2">가장 잘 맞는 것을 1~5개 골라주세요.</p>
+              <div id="g-teacherTags" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="q-label !mb-0">학원은 이런 점이 좋았어요 <span class="font-normal text-gray-400">(선택)</span></span>
+                <span id="count-academyTags" class="text-[11px] text-gray-400 font-bold px-1.5 rounded"></span>
+              </div>
+              <div id="g-academyTags" class="flex flex-wrap gap-1.5"></div>
+            </div>
+          </section>
+
+          <!-- ④ 학습 프로필 (추천용) -->
+          <section class="form-sec space-y-4">
+            <div class="sec-title"><span class="sec-num">4</span><span data-s="나의 학습 프로필" data-p="자녀의 학습 프로필">나의 학습 프로필</span></div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 leading-relaxed">
+              <div class="font-bold mb-0.5">🤫 솔직하게 답할수록 추천이 정확해져요</div>
+              <span data-s="이 항목은 학원이나 다른 사람에게 개인별로 공개되지 않아요. 숙제를 다 못 했거나 지각을 했어도 괜찮아요. 누구에게도 불이익은 없고, '나 같은 학생'에게 잘 맞는 학원을 찾는 데만 쓰여요."
+                    data-p="이 항목은 학원이나 다른 사람에게 개인별로 공개되지 않아요. 자녀가 숙제를 다 못 했거나 지각을 했어도 괜찮아요. 불이익은 없고, 비슷한 학생에게 잘 맞는 학원을 찾는 데만 쓰여요.">이 항목은 학원이나 다른 사람에게 개인별로 공개되지 않아요. 숙제를 다 못 했거나 지각을 했어도 괜찮아요. 누구에게도 불이익은 없고, '나 같은 학생'에게 잘 맞는 학원을 찾는 데만 쓰여요.</span>
+            </div>
+
+            <!-- MBTI -->
+            <div id="mbti-box">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="q-label !mb-0" data-s="나의 MBTI *" data-p="자녀의 MBTI *">나의 MBTI *</span>
+                <span id="mbti-result" class="font-black text-indigo-600 tracking-[0.3em] text-sm">____</span>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <input id="mbti-quick" maxlength="4" placeholder="알고 있다면 바로 입력 (예: INFP)" class="flex-1 border border-gray-200 rounded-lg p-2 uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+              <p class="text-[10px] text-gray-400 mb-2">몰라도 괜찮아요. 줄마다 더 가까운 쪽을 골라주세요.</p>
+              <div class="space-y-1.5">
+                <div id="g-mbtiEI" class="grid grid-cols-2 gap-1.5"></div>
+                <div id="g-mbtiSN" class="grid grid-cols-2 gap-1.5"></div>
+                <div id="g-mbtiTF" class="grid grid-cols-2 gap-1.5"></div>
+                <div id="g-mbtiJP" class="grid grid-cols-2 gap-1.5"></div>
+              </div>
+            </div>
+
+            <!-- 성적 -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="naesin-select" class="q-label">내신 등급 *</label>
+                <select id="naesin-select" class="w-full border border-gray-200 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></select>
+              </div>
+              <div>
+                <label for="mock-select" class="q-label">수능·모의고사 등급 *</label>
+                <select id="mock-select" class="w-full border border-gray-200 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"></select>
+              </div>
+            </div>
+            <p class="text-[10px] text-gray-400 -mt-2">고등 내신은 현 고1·고2가 5등급제, 고3·N수생이 9등급제예요. 과목마다 다르면 평균에 가까운 등급을 골라주세요.</p>
+
+            <div>
+              <span class="q-label">학원에 다닌 뒤 성적은? *</span>
+              <div id="g-gradeChange" class="grid grid-cols-3 gap-1.5"></div>
+            </div>
+
+            <div>
+              <span class="q-label" data-s="숙제는 얼마나 해갔나요? *" data-p="자녀가 숙제를 얼마나 해갔나요? *">숙제는 얼마나 해갔나요? *</span>
+              <div id="g-homeworkDone" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <div>
+              <span class="q-label" data-s="지각은 얼마나 했나요? *" data-p="자녀가 지각을 얼마나 했나요? *">지각은 얼마나 했나요? *</span>
+              <div id="g-lateness" class="grid grid-cols-2 gap-1.5"></div>
+            </div>
+          </section>
+
+          <!-- ⑤ 최종 만족도 -->
+          <section class="form-sec space-y-3">
+            <div class="sec-title"><span class="sec-num">5</span>최종 학원 만족도 *</div>
+            <div id="star-group" class="flex items-center gap-1 text-3xl text-gray-300"></div>
+            <div>
+              <label for="review-text" class="q-label">한마디 더 남기기 <span class="font-normal text-gray-400">(선택)</span></label>
+              <textarea id="review-text" rows="3" maxlength="500" placeholder="고르는 것만으로 표현이 안 된 장단점이 있다면 적어주세요." class="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+            </div>
+          </section>
+
+          <!-- ⑥ 기프티콘 · 동의 -->
+          <section class="form-sec space-y-3">
+            <div class="sec-title"><span class="sec-num">6</span>기프티콘 받을 번호 · 동의</div>
+            <input id="phone-input" type="tel" inputmode="numeric" placeholder="010-1234-5678" class="w-full border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+
+            <div id="consent-box" class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2.5">
+              <label class="flex items-start gap-2 text-[11px] text-gray-700 cursor-pointer">
+                <input id="agree-input" type="checkbox" class="mt-0.5 shrink-0">
+                <span><b class="text-indigo-600">[필수]</b> 리뷰 등록·수강 인증·기프티콘 발송을 위해 작성 내용(학습 프로필 포함), 휴대폰 번호, 증빙 사진을 수집합니다. 휴대폰 번호와 증빙 사진은 검수·발송 후 파기하며, 학습 프로필은 개인을 알아볼 수 없는 통계로만 공개됩니다.</span>
+              </label>
+              <label class="flex items-start gap-2 text-[11px] text-gray-700 cursor-pointer">
+                <input id="agree-reco" type="checkbox" class="mt-0.5 shrink-0">
+                <span><b class="text-gray-500">[선택]</b> 학습 프로필(학년·MBTI·성적·숙제·지각)을 <b>비슷한 학생에게 맞는 학원 추천</b>에 활용하는 데 동의합니다. 휴대폰 번호와 분리해 저장합니다. 동의하지 않아도 리뷰 등록과 기프티콘 지급에는 영향이 없어요.</span>
+              </label>
+              <label id="guardian-row" class="flex items-start gap-2 text-[11px] text-gray-700 cursor-pointer">
+                <input id="guardian-input" type="checkbox" class="mt-0.5 shrink-0">
+                <span><b class="text-indigo-600">[필수]</b> 만 14세 이상입니다. 만 14세 미만이면 보호자 동의를 받은 뒤 체크해 주세요.</span>
+              </label>
+            </div>
+          </section>
+
+          <div id="form-error" class="hidden sticky bottom-2 z-10 bg-red-50 border border-red-200 text-red-700 rounded-lg p-2.5 font-medium shadow-md"></div>
+
+          <button id="submit-btn" type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition text-sm shadow-md">
+            인증 요청 제출하기
+          </button>
+        </form>
+      </div>
+
+      <div id="success-wrap" class="hidden text-center py-6">
+        <div class="w-14 h-14 mx-auto bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-2xl mb-3"><i class="fa-solid fa-check"></i></div>
+        <h3 class="text-lg font-bold text-gray-900 mb-1">인증 요청을 제출했습니다</h3>
+        <p id="success-msg" class="text-xs text-gray-500 mb-5">관리자 검수 후 입력하신 번호로 기프티콘이 발송됩니다.</p>
+        <button onclick="closeModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =====================================================================
+       ⚙️ 설정 — 여기만 바꾸면 됩니다
+       ===================================================================== */
+    const CONFIG = {
+      // [구글 사이트 학원별 하위 페이지용] 이 코드를 상세 페이지에 넣을 땐 학원 id를 적으세요.
+      // 예: DETAIL_ID: 'daechi-math'   (홈 목록 페이지에서는 null 그대로)
+      DETAIL_ID: null,
+
+      // 구글 사이트 홈 주소 (상세 페이지의 '전체 학원 목록' 버튼이 이동할 곳)
+      HOME_URL: '',
+
+      // 영수증·리뷰를 저장할 Google Apps Script 웹앱 주소 (배포 후 붙여넣기)
+      // 비워두면 '테스트 모드'로 동작해 실제로 저장되지 않습니다.
+      UPLOAD_URL: '',
+
+      MAX_FILES: 3,
+    };
+
+    /* =====================================================================
+       📚 학원 데이터 — 주소·좌표·연락처를 실제 값으로 바꾸세요.
+       pageUrl: 구글 사이트에 학원별 하위 페이지를 만들었다면 그 주소를 넣으세요.
+       (비워두면 이 파일 자체를 ?academy=id 로 새 창에서 엽니다)
+       좌표 찾기: 구글 지도에서 위치 우클릭 → 맨 위 숫자(위도, 경도) 클릭하면 복사됨
+       ===================================================================== */
+    const ACADEMIES = [
+      {
+        id: 'daechi-math',
+        name: '대치 미래수학학원 본원',
+        region: '서울 대치동', grade: '고등', subject: '수학',
+        rating: 4.8, reviewCount: 48, studentCount: 28, parentCount: 20,
+        desc: '소수정예 밀착 관리, 내신 및 수능 최상위권 대치동 커리큘럼',
+        address: '서울 강남구 대치동 (실제 주소로 변경)',
+        lat: 37.4946, lng: 127.0626,
+        phone: '02-000-0000', hours: '평일 14:00–22:00 / 주말 10:00–18:00',
+        pageUrl: '',
+        // 💰 학년별 수강료 (예시 금액 — 실제 금액으로 바꾸세요)
+        // base: 보습 미포함 월 수강료 / withSupp: 보습 포함 월 수강료 (보습 과정이 없으면 null)
+        priceUpdated: '2026년 9월',
+        prices: [
+          { grade: '중3', label: '예비고1', schedule: '주 2회 · 회당 3시간', base: 480000, withSupp: 580000, supp: '주 1회 2시간 보충 + 자습 관리', material: '교재비 월 2~3만원 별도' },
+          { grade: '고1', schedule: '주 2회 · 회당 3시간', base: 520000, withSupp: 640000, supp: '주 1회 3시간 보충 + 오답 클리닉', material: '교재비 월 3만원 내외 별도' },
+          { grade: '고2', schedule: '주 2회 · 회당 3.5시간', base: 560000, withSupp: 680000, supp: '주 1회 3시간 보충 + 오답 클리닉', material: '교재비 월 3만원 내외 별도' },
+          { grade: '고3', schedule: '주 3회 · 회당 3시간', base: 620000, withSupp: 760000, supp: '주 2회 보충 + 실전 모의고사', material: '교재·모의고사비 월 5만원 내외 별도' },
+        ],
+        studentReviews: [
+          { badge: '재원생 인증 (3개월 수강)', who: '고2 학생',
+            text: '과제가 엄청 많지만 선생님이 끝까지 질의응답을 받아주셔서 내신 성적이 2등급 올랐습니다.',
+            scores: [['강의력', '5.0'], ['과제량', '4.8']] },
+        ],
+        parentReviews: [
+          { badge: '학부모 인증 (영수증 승인)', who: '고1 학부모',
+            text: '매주 테스트 결과 피드백 카톡이 전달되어 학습 상태 파악에 큰 도움이 됩니다.',
+            summary: '성적 상승 ↗ | 상담 피드백 양호' },
+        ],
+      },
+      {
+        id: 'mokdong-english',
+        name: '목동 아이비 영어어학원',
+        region: '서울 목동', grade: '중등', subject: '영어',
+        rating: 4.6, reviewCount: 32, studentCount: 18, parentCount: 14,
+        desc: '원어민 회화 및 내신 서술형 완벽 대비 커리큘럼',
+        address: '서울 양천구 목동 (실제 주소로 변경)',
+        lat: 37.5262, lng: 126.8751,
+        phone: '02-000-0000', hours: '평일 15:00–21:30',
+        pageUrl: '',
+        priceUpdated: '2026년 9월',
+        prices: [
+          { grade: '중1', schedule: '주 3회 · 회당 2시간', base: 380000, withSupp: 450000, supp: '주 1회 단어·문법 보충', material: '교재비 월 2만원 내외 별도' },
+          { grade: '중2', schedule: '주 3회 · 회당 2시간', base: 400000, withSupp: 470000, supp: '주 1회 단어·문법 보충', material: '교재비 월 2만원 내외 별도' },
+          { grade: '중3', label: '예비고1', schedule: '주 3회 · 회당 2.5시간', base: 430000, withSupp: 510000, supp: '내신 기간 서술형 특강 포함', material: '교재비 월 2~3만원 별도' },
+        ],
+        studentReviews: [
+          { badge: '재원생 인증 (2개월 수강)', who: '중2 학생',
+            text: '(예시 리뷰) 원어민 수업이 부담스럽지 않고, 서술형 첨삭을 매주 해줘서 좋아요.',
+            scores: [['강의력', '4.7'], ['과제량', '4.2']] },
+        ],
+        parentReviews: [
+          { badge: '학부모 인증 (영수증 승인)', who: '중1 학부모',
+            text: '(예시 리뷰) 월말마다 레벨 테스트 결과지를 받아볼 수 있어서 진도 확인이 쉬워요.',
+            summary: '레벨 상승 ↗ | 상담 응대 빠름' },
+        ],
+      },
+      {
+        id: 'bundang-science',
+        name: '분당 사이언스 LAB 초등관',
+        region: '경기 분당', grade: '초등', subject: '과학',
+        rating: 4.9, reviewCount: 19, studentCount: 7, parentCount: 12,
+        desc: '실험 위주 수업으로 흥미를 유발하는 초등 전문 과학 학원',
+        address: '경기 성남시 분당구 수내동 (실제 주소로 변경)',
+        lat: 37.3784, lng: 127.1151,
+        phone: '031-000-0000', hours: '평일 13:00–19:00',
+        pageUrl: '',
+        priceUpdated: '2026년 9월',
+        prices: [
+          { grade: '초3~4', schedule: '주 1회 · 회당 2시간', base: 220000, withSupp: null, supp: '', material: '실험 재료비 월 2만원 별도' },
+          { grade: '초5~6', schedule: '주 2회 · 회당 2시간', base: 320000, withSupp: 370000, supp: '월 2회 탐구 보고서 첨삭', material: '실험 재료비 월 2만원 별도' },
+        ],
+        studentReviews: [
+          { badge: '재원생 인증 (4개월 수강)', who: '초5 학생',
+            text: '(예시 리뷰) 매 시간 직접 실험을 해서 과학 시간이 제일 기다려져요.',
+            scores: [['재미', '5.0'], ['과제량', '4.9']] },
+        ],
+        parentReviews: [
+          { badge: '학부모 인증 (영수증 승인)', who: '초4 학부모',
+            text: '(예시 리뷰) 실험 보고서를 집에 보내줘서 아이가 뭘 배웠는지 알 수 있어요.',
+            summary: '흥미도 상승 ↗ | 소통 원활' },
+        ],
+      },
+    ];
+
+    /* =====================================================================
+       📝 리뷰 폼 선택지 — 문구·항목을 자유롭게 추가/수정하세요.
+       v: 저장되는 값 / t: 화면에 보이는 문구 / sub: 작은 설명(선택)
+       multi: 여러 개 선택 / max: 최대 선택 개수 / style: seg(가로 3칸), box(네모칸)
+       ===================================================================== */
+    const EXTRA_REGIONS = ['서울 대치동', '서울 목동', '서울 중계동', '서울 반포동', '경기 분당', '경기 평촌', '경기 일산', '경기 수지'];
+
+    const FORM_GROUPS = {
+      subjects: { multi: true, max: 3, options: ['수학', '영어', '국어', '과학', '사회', '논술', '코딩', '기타'] },
+      period:   { style: 'box', options: ['1~3개월', '3~6개월', '6개월~1년', '1년 이상'] },
+
+      // 수업 평가 (네이버 리뷰식 3단계)
+      homework:   { title: '숙제 양',    style: 'seg', options: [{ v: '적음', t: '양이 적어요' }, { v: '적당', t: '적당해요' }, { v: '많음', t: '양이 많아요' }] },
+      pace:       { title: '진도',       style: 'seg', options: [{ v: '느림', t: '느려요' }, { v: '적당', t: '적당해요' }, { v: '빠름', t: '빨라요' }] },
+      difficulty: { title: '수업 난이도', style: 'seg', options: [{ v: '쉬움', t: '쉬워요' }, { v: '적당', t: '적당해요' }, { v: '어려움', t: '어려워요' }] },
+      care:       { title: '학습 관리',   style: 'seg', options: [{ v: '느슨', t: '느슨해요' }, { v: '적당', t: '적당해요' }, { v: '꼼꼼', t: '꼼꼼해요' }] },
+
+      teacherTags: { multi: true, max: 5, options: [
+        { v: '카리스마', t: '😎 카리스마 있어요' }, { v: '상냥', t: '😊 상냥해요' }, { v: '친절', t: '🤗 친절해요' },
+        { v: '엄격', t: '🧐 엄격해요' }, { v: '절대안봐줌', t: '🔥 절대 안 봐줘요' }, { v: '재미', t: '😂 수업이 재미있어요' },
+        { v: '자세함', t: '📝 설명이 자세해요' }, { v: '원리위주', t: '💡 원리 위주로 가르쳐요' }, { v: '시험맞춤', t: '🎯 시험에 딱 맞춰줘요' },
+        { v: '질문환영', t: '🙋 질문을 잘 받아줘요' }, { v: '피드백', t: '💬 피드백이 꼼꼼해요' }, { v: '동기부여', t: '💪 동기부여를 잘해줘요' },
+        { v: '차분', t: '🧘 차분해요' }, { v: '진도책임', t: '⚡ 진도를 확실히 챙겨요' }, { v: '자료', t: '📚 자료가 알차요' },
+        { v: '공감', t: '👂 학생 말을 잘 들어줘요' },
+      ] },
+      academyTags: { multi: true, max: 5, options: [
+        { v: '시설', t: '🏫 시설이 깨끗해요' }, { v: '자습실', t: '🪑 자습실이 좋아요' }, { v: '상담', t: '📞 상담을 잘해줘요' },
+        { v: '교통', t: '🚌 셔틀·교통이 편해요' }, { v: '소수정예', t: '👥 소수정예예요' }, { v: '성적관리', t: '📊 성적 관리가 체계적이에요' },
+        { v: '분위기', t: '🤝 반 분위기가 좋아요' }, { v: '가격', t: '💸 수강료가 합리적이에요' },
+      ] },
+
+      // MBTI — 알파벳별로 따로 저장
+      mbtiEI: { style: 'box', options: [{ v: 'E', t: 'E', sub: '사람들과 있을 때 힘이 나요' }, { v: 'I', t: 'I', sub: '혼자 있을 때 힘이 나요' }] },
+      mbtiSN: { style: 'box', options: [{ v: 'S', t: 'S', sub: '경험·사실을 믿어요' }, { v: 'N', t: 'N', sub: '상상·아이디어가 많아요' }] },
+      mbtiTF: { style: 'box', options: [{ v: 'T', t: 'T', sub: '논리·원칙이 먼저예요' }, { v: 'F', t: 'F', sub: '공감·관계가 먼저예요' }] },
+      mbtiJP: { style: 'box', options: [{ v: 'J', t: 'J', sub: '미리 계획하고 지켜요' }, { v: 'P', t: 'P', sub: '상황 따라 유연하게' }] },
+
+      gradeChange: { style: 'box', options: [
+        { v: '크게상승', t: '많이 올랐어요 ↗↗' }, { v: '상승', t: '조금 올랐어요 ↗' }, { v: '유지', t: '비슷해요 →' },
+        { v: '하락', t: '조금 떨어졌어요 ↘' }, { v: '크게하락', t: '많이 떨어졌어요 ↘↘' }, { v: '시험전', t: '아직 시험 전이에요' },
+      ] },
+      homeworkDone: { options: [
+        { v: '거의다', t: '거의 다 해갔어요' }, { v: '대체로', t: '대체로 해갔어요' }, { v: '반반', t: '반 정도 해갔어요' },
+        { v: '자주못함', t: '자주 못 해갔어요' }, { v: '거의못함', t: '거의 못 해갔어요' },
+      ] },
+      lateness: { style: 'box', options: [
+        { v: '없음', t: '한 번도 없어요' }, { v: '가끔', t: '가끔 (한 달 1~2번)' },
+        { v: '자주', t: '자주 (일주일 1번 이상)' }, { v: '거의매번', t: '거의 매번' },
+      ] },
+    };
+    const EVAL_KEYS = ['homework', 'pace', 'difficulty', 'care'];
+    const MBTI_KEYS = ['mbtiEI', 'mbtiSN', 'mbtiTF', 'mbtiJP'];
+    const RATING_LABELS = ['', '별로예요', '아쉬워요', '보통이에요', '좋아요', '최고예요'];
+
+    /* ===================================================================== */
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const findAcademy = (id) => ACADEMIES.find(a => a.id === id);
+    const pct = (n, total) => total ? Math.round(n / total * 100) : 0;
+
+    // ---------- 상세 페이지 주소 / 새 창 링크 ----------
+    function detailHref(a) {
+      if (a.pageUrl) return a.pageUrl;
+      try {
+        const u = new URL(location.href);
+        if (!/^(https?|file):$/.test(u.protocol)) return null;
+        u.search = ''; u.hash = '';
+        u.searchParams.set('academy', a.id);
+        return u.toString();
+      } catch (e) { return null; }
+    }
+    function detailLinkAttrs(a) {
+      const href = detailHref(a);
+      if (href) return `href="${esc(href)}" target="_blank" rel="noopener"`;
+      // 새 창을 열 수 없는 환경이면 같은 화면에서 상세 보기
+      return `href="#" onclick="showDetail('${a.id}'); return false;"`;
+    }
+    function homeHref() {
+      if (CONFIG.HOME_URL) return CONFIG.HOME_URL;
+      try { const u = new URL(location.href); u.search = ''; u.hash = ''; return u.toString(); }
+      catch (e) { return '#'; }
+    }
+
+    // ---------- 리뷰 HTML ----------
+    function studentReviewHTML(r) {
+      const scores = (r.scores || []).map(([k, v]) => `${esc(k)} <strong class="text-amber-500">${esc(v)}</strong>`).join(' / ');
+      return `
+        <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+          <div class="flex items-center justify-between mb-2">
+            <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+              <i class="fa-solid fa-circle-check text-indigo-500"></i> ${esc(r.badge)}
+            </span>
+            <span class="text-xs text-gray-400">${esc(r.who)}</span>
+          </div>
+          <p class="text-xs text-gray-800 leading-relaxed mb-2">${esc(r.text)}</p>
+          <div class="text-[11px] text-gray-500">${scores}</div>
+        </div>`;
+    }
+    function parentReviewHTML(r) {
+      return `
+        <div class="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+          <div class="flex items-center justify-between mb-2">
+            <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+              <i class="fa-solid fa-user-check text-emerald-500"></i> ${esc(r.badge)}
+            </span>
+            <span class="text-xs text-gray-400">${esc(r.who)}</span>
+          </div>
+          <p class="text-xs text-gray-800 leading-relaxed mb-2">${esc(r.text)}</p>
+          <div class="text-[11px] text-emerald-700 font-bold">${esc(r.summary)}</div>
+        </div>`;
+    }
+    function emptyReviewHTML() {
+      return `<p class="text-xs text-gray-400 text-center py-4">아직 등록된 인증 리뷰가 없습니다.</p>`;
+    }
+
+    function tagsHTML(a) {
+      return `
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${esc(a.region)}</span>
+          <span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded">${esc(a.grade)}</span>
+          <span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded">${esc(a.subject)}</span>
+        </div>`;
+    }
+    function ratingHTML(a) {
+      return `
+        <div class="text-right shrink-0">
+          <div class="flex items-center justify-end space-x-1 text-amber-500 font-bold text-lg">
+            <i class="fa-solid fa-star"></i><span>${a.rating.toFixed(1)}</span>
+          </div>
+          <span class="text-xs text-gray-400">인증 리뷰 ${a.reviewCount}개</span>
+        </div>`;
+    }
+    function statsHTML(a) {
+      return `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-around text-center text-xs">
+          <div><div class="text-gray-400 mb-0.5">총 인증 후기</div><div class="font-bold text-gray-800 text-sm">${a.reviewCount}명</div></div>
+          <div class="w-px bg-slate-200"></div>
+          <div><div class="text-indigo-600 font-medium mb-0.5"><i class="fa-solid fa-user-ninja mr-1"></i>재원생 인증</div>
+               <div class="font-bold text-indigo-700 text-sm">${a.studentCount}명 (${pct(a.studentCount, a.reviewCount)}%)</div></div>
+          <div class="w-px bg-slate-200"></div>
+          <div><div class="text-emerald-600 font-medium mb-0.5"><i class="fa-solid fa-user-shield mr-1"></i>학부모 인증</div>
+               <div class="font-bold text-emerald-700 text-sm">${a.parentCount}명 (${pct(a.parentCount, a.reviewCount)}%)</div></div>
+        </div>`;
+    }
+    function tabsHTML(a, full) {
+      const sList = full ? a.studentReviews : a.studentReviews.slice(0, 1);
+      const pList = full ? a.parentReviews : a.parentReviews.slice(0, 1);
+      return `
+        <div class="bg-gray-50/60 p-2 flex border-b border-gray-200">
+          <button onclick="toggleTab('student','${a.id}')" id="btn-student-${a.id}" class="flex-1 py-2 text-center font-bold text-xs rounded-lg transition bg-white text-indigo-600 shadow-sm border border-gray-200">
+            <i class="fa-solid fa-graduation-cap mr-1"></i>학생 솔직 후기 (${a.studentCount})
+          </button>
+          <button onclick="toggleTab('parent','${a.id}')" id="btn-parent-${a.id}" class="flex-1 py-2 text-center font-bold text-xs text-gray-500 rounded-lg transition hover:text-gray-800">
+            <i class="fa-solid fa-users mr-1"></i>학부모 학습리포트 (${a.parentCount})
+          </button>
+        </div>
+        <div class="p-5">
+          <div id="content-student-${a.id}" class="space-y-4">${sList.length ? sList.map(studentReviewHTML).join('') : emptyReviewHTML()}</div>
+          <div id="content-parent-${a.id}" class="space-y-4 hidden">${pList.length ? pList.map(parentReviewHTML).join('') : emptyReviewHTML()}</div>
+        </div>`;
+    }
+
+
+    // ---------- 학년별 수강료 ----------
+    const won = (n) => '월 ' + Number(n).toLocaleString('ko-KR') + '원';
+    const manwon = (n) => (n / 10000).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '만원';
+    const minPrice = (a) => (a.prices && a.prices.length) ? Math.min(...a.prices.map(p => p.base)) : null;
+
+    function priceSectionHTML(a) {
+      if (!a.prices || !a.prices.length) return '';
+      const tabs = a.prices.map((p, i) =>
+        `<button type="button" onclick="selectPriceGrade('${a.id}', ${i})" data-price-tab="${a.id}" class="px-3.5 py-1.5 rounded-lg text-xs transition">${esc(p.grade)}${p.label ? ` <span class="opacity-70">(${esc(p.label)})</span>` : ''}</button>`
+      ).join('') +
+        `<button type="button" onclick="selectPriceGrade('${a.id}', -1)" data-price-tab="${a.id}" class="px-3.5 py-1.5 rounded-lg text-xs transition"><i class="fa-solid fa-table-list mr-1"></i>전체 비교</button>`;
+      return `
+        <div class="p-6 border-b border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-gray-800 flex items-center gap-1.5"><i class="fa-solid fa-won-sign text-indigo-600"></i> 학년별 수강료</h2>
+            <span class="text-[11px] text-gray-400">${esc(a.priceUpdated || '')} 기준</span>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-3">${tabs}</div>
+          <div id="price-panel-${a.id}"></div>
+          <p class="text-[11px] text-gray-400 mt-3 leading-relaxed">
+            <i class="fa-solid fa-circle-info mr-1"></i>교육청 신고 교습비와 인증 영수증을 바탕으로 정리한 금액입니다. 반 편성·형제 할인 등에 따라 실제 금액은 다를 수 있어요.
+          </p>
+        </div>`;
+    }
+
+    function selectPriceGrade(id, idx) {
+      const a = findAcademy(id);
+      document.querySelectorAll(`[data-price-tab="${id}"]`).forEach((b, i) => {
+        const active = (idx === -1) ? i === a.prices.length : i === idx;
+        b.className = 'px-3.5 py-1.5 rounded-lg text-xs transition ' +
+          (active ? 'bg-indigo-600 text-white font-bold' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium');
+      });
+      const panel = $(`price-panel-${id}`);
+
+      if (idx === -1) {
+        panel.innerHTML = `
+          <div class="overflow-x-auto rounded-xl border border-gray-200">
+            <table class="w-full text-xs text-left min-w-[440px]">
+              <thead class="bg-gray-50 text-gray-500">
+                <tr><th class="px-3 py-2 font-bold">학년</th><th class="px-3 py-2 font-bold">수업 구성</th>
+                    <th class="px-3 py-2 font-bold text-right">보습 미포함</th><th class="px-3 py-2 font-bold text-right text-indigo-600">보습 포함</th></tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${a.prices.map(p => `
+                  <tr>
+                    <td class="px-3 py-2.5 font-bold text-gray-800 whitespace-nowrap">${esc(p.grade)}</td>
+                    <td class="px-3 py-2.5 text-gray-500">${esc(p.schedule)}</td>
+                    <td class="px-3 py-2.5 text-right font-bold text-gray-900 whitespace-nowrap">${won(p.base)}</td>
+                    <td class="px-3 py-2.5 text-right font-bold whitespace-nowrap ${p.withSupp ? 'text-indigo-700' : 'text-gray-300'}">${p.withSupp ? won(p.withSupp) : '과정 없음'}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+        return;
+      }
+
+      const p = a.prices[idx];
+      panel.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="rounded-xl border border-gray-200 p-4">
+            <div class="text-[11px] font-bold text-gray-500 mb-1">보습 미포함</div>
+            <div class="text-xl font-black text-gray-900">${won(p.base)}</div>
+            <div class="text-[11px] text-gray-500 mt-1"><i class="fa-regular fa-calendar mr-1"></i>${esc(p.schedule)}</div>
+          </div>
+          ${p.withSupp ? `
+          <div class="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+            <div class="text-[11px] font-bold text-indigo-600 mb-1">보습 포함</div>
+            <div class="text-xl font-black text-indigo-700">${won(p.withSupp)}</div>
+            <div class="text-[11px] text-indigo-600/80 mt-1"><i class="fa-solid fa-plus mr-1"></i>${Number(p.withSupp - p.base).toLocaleString('ko-KR')}원 · ${esc(p.supp)}</div>
+          </div>` : `
+          <div class="rounded-xl border border-dashed border-gray-200 p-4 flex items-center justify-center text-xs text-gray-400">
+            이 학년은 보습 과정이 없습니다
+          </div>`}
+        </div>
+        ${p.material ? `<p class="text-[11px] text-gray-500 mt-2"><i class="fa-solid fa-book-open mr-1"></i>${esc(p.material)}</p>` : ''}`;
+    }
+
+    // ---------- 목록 카드 ----------
+    function cardHTML(a) {
+      return `
+        <article class="academy-item bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm" data-id="${a.id}">
+          <div class="p-6 border-b border-gray-100">
+            <div class="flex justify-between items-start gap-3 mb-2">
+              <div>
+                ${tagsHTML(a)}
+                <a ${detailLinkAttrs(a)} class="text-xl font-bold text-gray-900 hover:text-indigo-600 transition">
+                  ${esc(a.name)} <i class="fa-solid fa-arrow-up-right-from-square text-xs text-gray-400 align-middle ml-0.5"></i>
+                </a>
+              </div>
+              ${ratingHTML(a)}
+            </div>
+            <p class="text-sm text-gray-600 mb-1">${esc(a.desc)}</p>
+            <p class="text-xs text-gray-400 mb-1"><i class="fa-solid fa-location-dot mr-1"></i>${esc(a.address)}</p>
+            ${minPrice(a) ? `<p class="text-xs text-gray-700 mb-4"><i class="fa-solid fa-won-sign mr-1 text-gray-400"></i><strong>월 ${manwon(minPrice(a))}부터</strong> <span class="text-gray-400">· ${a.prices.map(p => esc(p.grade)).join(', ')} 가격은 상세 페이지에서</span></p>` : '<div class="mb-3"></div>'}
+            ${statsHTML(a)}
+          </div>
+          ${tabsHTML(a, false)}
+          <div class="px-5 pb-5 flex gap-2">
+            <a ${detailLinkAttrs(a)} class="flex-1 text-center bg-gray-900 hover:bg-gray-800 text-white font-bold py-2.5 rounded-xl text-xs transition">
+              <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>상세 페이지 새 창으로 보기
+            </a>
+            <button onclick="openModal(event,'${a.id}')" class="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2.5 rounded-xl text-xs transition border border-indigo-100">
+              <i class="fa-solid fa-feather mr-1"></i>이 학원 리뷰 쓰기
+            </button>
+          </div>
+        </article>`;
+    }
+
+    // ---------- 상세 페이지 ----------
+    function mapLinks(a) {
+      const q = encodeURIComponent(a.name);
+      return {
+        kakao: `https://map.kakao.com/link/map/${q},${a.lat},${a.lng}`,
+        naver: `https://map.naver.com/p/search/${encodeURIComponent(a.address.replace(/\(.*?\)/g, '').trim() || a.name)}`,
+        google: `https://www.google.com/maps/search/?api=1&query=${a.lat},${a.lng}`,
+        embed: `https://maps.google.com/maps?q=${a.lat},${a.lng}&z=16&hl=ko&output=embed`,
+      };
+    }
+    function detailHTML(a) {
+      const m = mapLinks(a);
+      return `
+        <a href="${esc(homeHref())}" target="_top" class="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-indigo-600 mb-4">
+          <i class="fa-solid fa-arrow-left"></i> 전체 학원 목록
+        </a>
+
+        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-6">
+          <div class="p-6 border-b border-gray-100">
+            <div class="flex justify-between items-start gap-3 mb-2">
+              <div>${tagsHTML(a)}<h1 class="text-2xl font-black text-gray-900">${esc(a.name)}</h1></div>
+              ${ratingHTML(a)}
+            </div>
+            <p class="text-sm text-gray-600 mb-4">${esc(a.desc)}</p>
+            ${statsHTML(a)}
+          </div>
+
+          ${priceSectionHTML(a)}
+
+          <div class="p-6 border-b border-gray-100">
+            <h2 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-1.5"><i class="fa-solid fa-map-location-dot text-indigo-600"></i> 학원 위치</h2>
+            <div class="map-wrap rounded-xl overflow-hidden border border-gray-200 mb-3">
+              <iframe src="${m.embed}" class="w-full block" style="height:300px;border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="${esc(a.name)} 위치"></iframe>
+            </div>
+            <div class="space-y-1.5 text-xs text-gray-700 mb-3">
+              <div><i class="fa-solid fa-location-dot w-4 text-gray-400"></i> ${esc(a.address)}</div>
+              <div><i class="fa-solid fa-phone w-4 text-gray-400"></i> <a href="tel:${esc(a.phone)}" class="hover:text-indigo-600">${esc(a.phone)}</a></div>
+              <div><i class="fa-regular fa-clock w-4 text-gray-400"></i> ${esc(a.hours)}</div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-[11px] font-bold">
+              <a href="${m.kakao}" target="_blank" rel="noopener" class="text-center bg-yellow-300 hover:bg-yellow-400 text-gray-900 py-2 rounded-lg">카카오맵</a>
+              <a href="${m.naver}" target="_blank" rel="noopener" class="text-center bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg">네이버 지도</a>
+              <a href="${m.google}" target="_blank" rel="noopener" class="text-center bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-lg">구글 지도</a>
+            </div>
+          </div>
+
+          ${tabsHTML(a, true)}
+        </div>
+
+        <button onclick="openModal(event,'${a.id}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl text-sm shadow-md transition">
+          <i class="fa-solid fa-feather mr-1"></i> 이 학원 수강 인증하고 기프티콘 받기
+        </button>
+        <p class="text-center text-[11px] text-gray-400 mt-2">학생 올리브영 10,000원 · 학부모 스타벅스 아메리카노</p>`;
+    }
+
+    function showDetail(id) {
+      const a = findAcademy(id);
+      if (!a) return false;
+      document.title = `${a.name} - 찐학원`;
+      $('list-view').classList.add('hidden');
+      const dv = $('detail-view');
+      dv.innerHTML = detailHTML(a);
+      dv.classList.remove('hidden');
+      if (a.prices && a.prices.length) selectPriceGrade(a.id, 0);
+      window.scrollTo(0, 0);
+      return true;
+    }
+
+    // ---------- 목록 렌더 & 필터 ----------
+    let currentGrade = 'all', currentSubject = 'all', currentQuery = '', currentMinRating = 0;
+    let overviewMap = null;
+    const markers = {};
+
+    function renderList() {
+      $('academy-list').innerHTML = ACADEMIES.map(cardHTML).join('');
+    }
+
+    function setFilter(type, value, btn) {
+      const cls = { grade: '.grade-btn', subject: '.subject-btn', rating: '.rating-btn' }[type];
+      if (type === 'grade') currentGrade = value;
+      else if (type === 'subject') currentSubject = value;
+      else if (type === 'rating') currentMinRating = value;
+      document.querySelectorAll(cls).forEach(b => {
+        b.classList.remove('bg-indigo-600', 'text-white', 'font-bold');
+        b.classList.add('bg-gray-100', 'text-gray-700');
+      });
+      btn.classList.remove('bg-gray-100', 'text-gray-700');
+      btn.classList.add('bg-indigo-600', 'text-white', 'font-bold');
+      applyFilters();
+    }
+
+    function matches(a) {
+      const q = currentQuery.trim().toLowerCase();
+      const text = `${a.name} ${a.region} ${a.address} ${a.subject} ${a.grade}`.toLowerCase();
+      return (currentGrade === 'all' || a.grade === currentGrade)
+          && (currentSubject === 'all' || a.subject === currentSubject)
+          && a.rating >= currentMinRating
+          && (!q || text.includes(q));
+    }
+
+    function applyFilters() {
+      let visible = 0;
+      const bounds = [];
+      ACADEMIES.forEach(a => {
+        const ok = matches(a);
+        const el = document.querySelector(`.academy-item[data-id="${a.id}"]`);
+        if (el) el.classList.toggle('hidden', !ok);
+        if (ok) { visible++; bounds.push([a.lat, a.lng]); }
+        const mk = markers[a.id];
+        if (mk && overviewMap) {
+          if (ok && !overviewMap.hasLayer(mk)) mk.addTo(overviewMap);
+          if (!ok && overviewMap.hasLayer(mk)) overviewMap.removeLayer(mk);
+        }
+      });
+      $('no-results').classList.toggle('hidden', visible !== 0);
+      $('map-count').textContent = `${visible}곳 표시 중`;
+      if (overviewMap && bounds.length) {
+        if (bounds.length === 1) overviewMap.setView(bounds[0], 15);
+        else overviewMap.fitBounds(bounds, { padding: [30, 30] });
+      }
+    }
+
+    function toggleTab(type, id) {
+      const sC = $(`content-student-${id}`), pC = $(`content-parent-${id}`);
+      const sB = $(`btn-student-${id}`), pB = $(`btn-parent-${id}`);
+      const on = 'flex-1 py-2 text-center font-bold text-xs rounded-lg transition bg-white shadow-sm border border-gray-200';
+      const off = 'flex-1 py-2 text-center font-bold text-xs text-gray-500 rounded-lg transition hover:text-gray-800';
+      const isStudent = type === 'student';
+      sC.classList.toggle('hidden', !isStudent);
+      pC.classList.toggle('hidden', isStudent);
+      sB.className = isStudent ? on + ' text-indigo-600' : off;
+      pB.className = isStudent ? off : on + ' text-emerald-600';
+    }
+
+    function initOverviewMap() {
+      if (typeof L === 'undefined') {
+        $('overview-map').innerHTML = '<div class="h-full flex items-center justify-center text-xs text-gray-400">지도를 불러오지 못했습니다.</div>';
+        return;
+      }
+      overviewMap = L.map('overview-map', { scrollWheelZoom: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(overviewMap);
+      const icon = L.divIcon({ className: '', html: '<div class="zzin-pin"><span>찐</span></div>', iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -28] });
+      ACADEMIES.forEach(a => {
+        const href = detailHref(a);
+        const link = href
+          ? `<a href="${esc(href)}" target="_blank" rel="noopener" style="color:#4f46e5;font-weight:700">상세 페이지 새 창으로 보기 ↗</a>`
+          : `<a href="#" onclick="showDetail('${a.id}');return false;" style="color:#4f46e5;font-weight:700">상세 보기</a>`;
+        markers[a.id] = L.marker([a.lat, a.lng], { icon, title: a.name })
+          .bindPopup(`<div style="font-size:12px;line-height:1.5">
+              <div style="font-weight:800;font-size:13px">${esc(a.name)}</div>
+              <div style="color:#6b7280">${esc(a.grade)} · ${esc(a.subject)} · ★ ${a.rating.toFixed(1)}</div>
+              <div style="margin-top:4px">${link}</div></div>`)
+          .addTo(overviewMap);
+      });
+    }
+
+    /* =====================================================================
+       ✍️ 리뷰 작성 모달
+       ===================================================================== */
+    let receiptFiles = [];   // { name, type, dataUrl }
+    let rating = 0;
+    let picks = {};          // 선택 칩 상태 (FORM_GROUPS 키별)
+
+    // ----- 선택 칩 -----
+    const normOpt = (o) => typeof o === 'string' ? { v: o, t: o } : o;
+
+    function blankPicks() {
+      picks = {};
+      Object.entries(FORM_GROUPS).forEach(([k, g]) => { picks[k] = g.multi ? [] : ''; });
+    }
+
+    function renderGroup(key) {
+      const g = FORM_GROUPS[key], el = $('g-' + key);
+      if (!el) return;
+      el.innerHTML = g.options.map(normOpt).map(o => {
+        const on = g.multi ? picks[key].includes(o.v) : picks[key] === o.v;
+        const inner = o.sub
+          ? `<span class="block text-base font-black leading-none">${esc(o.t)}</span><span class="block text-[10px] font-medium opacity-80 mt-1">${esc(o.sub)}</span>`
+          : esc(o.t);
+        return `<button type="button" class="chip ${g.style || ''}" data-key="${key}" data-v="${esc(o.v)}" aria-pressed="${on}">${inner}</button>`;
+      }).join('');
+      const c = $('count-' + key);
+      if (c && g.max) c.textContent = `${picks[key].length}/${g.max}`;
+    }
+    function renderAllGroups() { Object.keys(FORM_GROUPS).forEach(renderGroup); }
+
+    function pickChip(key, v) {
+      const g = FORM_GROUPS[key];
+      if (!g) return;
+      if (g.multi) {
+        const arr = picks[key], i = arr.indexOf(v);
+        if (i >= 0) arr.splice(i, 1);
+        else if (g.max && arr.length >= g.max) { flash($('count-' + key) || $('g-' + key)); return; }
+        else arr.push(v);
+      } else {
+        picks[key] = v;
+      }
+      renderGroup(key);
+      if (MBTI_KEYS.includes(key)) updateMbti(true);
+    }
+
+    function updateMbti(fromChip) {
+      const code = MBTI_KEYS.map(k => picks[k] || '_').join('');
+      $('mbti-result').textContent = code;
+      if (fromChip && !code.includes('_')) $('mbti-quick').value = code;
+    }
+
+    function onMbtiQuick(e) {
+      const letters = e.target.value.toUpperCase().replace(/[^EISNTFJP]/g, '');
+      e.target.value = letters.slice(0, 4);
+      for (const ch of letters) {
+        const key = MBTI_KEYS.find(k => FORM_GROUPS[k].options.some(o => o.v === ch));
+        if (key) { picks[key] = ch; renderGroup(key); }
+      }
+      updateMbti(false);
+    }
+
+    function flash(el) {
+      if (!el) return;
+      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    }
+
+    // ----- 학생/학부모에 따라 문구 바꾸기 -----
+    const isParent = () => document.querySelector('input[name="user_type"]:checked').value === 'parent';
+    function applyWhoLabels() {
+      const p = isParent();
+      document.querySelectorAll('#review-form [data-s]').forEach(el => { el.textContent = p ? el.dataset.p : el.dataset.s; });
+      $('guardian-row').classList.toggle('hidden', p);
+    }
+
+    // ----- 학원 선택 시 지역·과목 자동 채우기 -----
+    function prefillFromAcademy() {
+      const a = findAcademy($('academy-select').value);
+      if (!a) return;
+      if (!$('region-input').dataset.touched) $('region-input').value = a.region;
+      if (!picks.subjects.length) { picks.subjects = [a.subject]; renderGroup('subjects'); }
+    }
+
+    // ----- 학년 선택 시 성적 기본값 -----
+    function onSchoolGradeChange() {
+      const g = $('school-grade').value;
+      if (g.startsWith('초')) { $('naesin-select').value = '해당 없음'; $('mock-select').value = '응시 전'; }
+      else if (g.startsWith('중') && !$('mock-select').value) { $('mock-select').value = '응시 전'; }
+    }
+
+    function buildGradeSelects() {
+      const nums = (n) => Array.from({ length: n }, (_, i) => i + 1);
+      $('naesin-select').innerHTML = '<option value="">선택</option>' +
+        `<optgroup label="고등 · 5등급제 (현 고1·고2)">${nums(5).map(n => `<option value="5등급제 ${n}등급">${n}등급</option>`).join('')}</optgroup>` +
+        `<optgroup label="고등 · 9등급제 (현 고3·N수)">${nums(9).map(n => `<option value="9등급제 ${n}등급">${n}등급</option>`).join('')}</optgroup>` +
+        `<optgroup label="중학교 성취도">${['A', 'B', 'C', 'D', 'E'].map(x => `<option value="중등 ${x}">${x}</option>`).join('')}</optgroup>` +
+        `<optgroup label="기타"><option value="해당 없음">해당 없음 (초등 등)</option><option value="모름">잘 모르겠어요</option></optgroup>`;
+      $('mock-select').innerHTML = '<option value="">선택</option>' +
+        nums(9).map(n => `<option value="${n}등급">${n}등급</option>`).join('') +
+        '<option value="응시 전">아직 안 봤어요</option><option value="모름">잘 모르겠어요</option>';
+    }
+
+    function buildEvalRows() {
+      $('eval-rows').innerHTML = EVAL_KEYS.map(k => `
+        <div class="flex items-center gap-2">
+          <div class="w-16 shrink-0 font-bold text-gray-700">${esc(FORM_GROUPS[k].title)}</div>
+          <div id="g-${k}" class="flex-1 flex gap-1.5"></div>
+        </div>`).join('');
+    }
+
+    // ----- 모달 열기/닫기 -----
+    function openModal(ev, academyId) {
+      resetForm();
+      if (academyId) { $('academy-select').value = academyId; prefillFromAcademy(); }
+      const modal = $('review-modal');
+      modal.classList.remove('hidden');
+      const dlg = $('modal-dialog');
+      dlg.scrollTop = 0;
+      const vh = window.innerHeight, h = dlg.offsetHeight;
+      let top;
+      // 구글 사이트처럼 페이지가 아주 긴 틀 안에 들어가 있으면, 누른 버튼 근처에 창을 띄웁니다.
+      if (vh > 1000 && ev && ev.clientY) top = Math.min(Math.max(16, ev.clientY - 140), vh - h - 16);
+      else top = (vh - h) / 2;
+      dlg.style.top = Math.max(16, top) + 'px';
+    }
+    function closeModal() { $('review-modal').classList.add('hidden'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    function resetForm() {
+      $('review-form').reset();
+      delete $('region-input').dataset.touched;
+      receiptFiles = []; renderPreviews();
+      blankPicks(); renderAllGroups(); updateMbti(false);
+      setRating(0);
+      applyWhoLabels();
+      hideError();
+      $('form-wrap').classList.remove('hidden');
+      $('success-wrap').classList.add('hidden');
+      const btn = $('submit-btn'); btn.disabled = false; btn.textContent = '인증 요청 제출하기';
+    }
+
+    function setRating(n) {
+      rating = n;
+      $('star-group').innerHTML = [1, 2, 3, 4, 5].map(i =>
+        `<button type="button" onclick="setRating(${i})" aria-label="${i}점" class="${i <= n ? 'text-amber-400' : 'text-gray-300'} hover:scale-110 transition"><i class="fa-solid fa-star"></i></button>`
+      ).join('') + (n ? `<span class="text-sm font-bold text-gray-700 ml-2">${n}점 · ${RATING_LABELS[n]}</span>` : `<span class="text-xs text-gray-400 ml-2">별을 눌러 점수를 주세요</span>`);
+    }
+
+    function showError(msg, targetId) {
+      const e = $('form-error'); e.textContent = msg; e.classList.remove('hidden');
+      const t = targetId && $(targetId);
+      if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'center' }); flash(t); }
+    }
+    function hideError() { $('form-error').classList.add('hidden'); }
+
+    // ----- 증빙 파일 -----
+    const readAsDataURL = (file) => new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file);
+    });
+
+    // 사진은 긴 변 1600px, JPEG로 줄여서 업로드 속도를 높입니다.
+    function compressImage(file, maxSide = 1600, quality = 0.82) {
+      return new Promise((res, rej) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          res(c.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('decode')); };
+        img.src = url;
+      });
+    }
+
+    async function handleFiles(fileList) {
+      hideError();
+      for (const f of Array.from(fileList)) {
+        if (receiptFiles.length >= CONFIG.MAX_FILES) { showError(`증빙 사진은 최대 ${CONFIG.MAX_FILES}장까지 올릴 수 있습니다.`); break; }
+        const isImg = f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name);
+        const isPdf = f.type === 'application/pdf';
+        if (!isImg && !isPdf) { showError('사진(JPG, PNG) 또는 PDF 파일만 올릴 수 있습니다.'); continue; }
+        if (f.size > 20 * 1024 * 1024) { showError(`${f.name}: 20MB 이하 파일만 올릴 수 있습니다.`); continue; }
+        try {
+          if (isImg) {
+            let dataUrl, type = 'image/jpeg';
+            try { dataUrl = await compressImage(f); }
+            catch (e) {
+              if (f.size > 5 * 1024 * 1024) { showError(`${f.name}: 이 형식은 5MB 이하만 올릴 수 있습니다. JPG로 바꿔 올려주세요.`); continue; }
+              dataUrl = await readAsDataURL(f); type = f.type || 'image/heic';
+            }
+            receiptFiles.push({ name: f.name.replace(/\.[^.]+$/, '') + (type === 'image/jpeg' ? '.jpg' : ''), type, dataUrl });
+          } else {
+            if (f.size > 5 * 1024 * 1024) { showError(`${f.name}: PDF는 5MB 이하만 올릴 수 있습니다.`); continue; }
+            receiptFiles.push({ name: f.name, type: f.type, dataUrl: await readAsDataURL(f) });
+          }
+        } catch (e) { showError(`${f.name}: 파일을 읽지 못했습니다. 다른 사진으로 다시 시도해 주세요.`); }
+      }
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      $('receipt-previews').innerHTML = receiptFiles.map((f, i) => `
+        <div class="relative aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+          ${f.type.startsWith('image/') && f.type !== 'image/heic'
+            ? `<img src="${f.dataUrl}" alt="증빙 ${i + 1}" class="w-full h-full object-cover">`
+            : `<div class="w-full h-full flex flex-col items-center justify-center text-gray-500 p-1"><i class="fa-solid fa-file-lines text-2xl mb-1"></i><span class="text-[9px] truncate w-full text-center">${esc(f.name)}</span></div>`}
+          <button type="button" onclick="removeFile(${i})" aria-label="삭제" class="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 text-white rounded-full text-[11px]"><i class="fa-solid fa-xmark"></i></button>
+        </div>`).join('');
+    }
+    function removeFile(i) { receiptFiles.splice(i, 1); renderPreviews(); }
+
+    // ----- 검사 → [메시지, 이동할 요소 id] -----
+    function validateForm() {
+      const phone = $('phone-input').value.replace(/[^0-9]/g, '');
+      if (!$('academy-select').value) return ['다닌 학원을 선택해 주세요.', 'academy-select'];
+      if (!$('region-input').value.trim()) return ['지역을 입력해 주세요.', 'region-input'];
+      if (!$('school-grade').value) return ['학년을 선택해 주세요.', 'school-grade'];
+      if (!picks.subjects.length) return ['수강한 과목을 골라주세요.', 'g-subjects'];
+      if (!picks.period) return ['수강 기간을 골라주세요.', 'g-period'];
+      if (!receiptFiles.length) return ['수강 증빙 사진(영수증/수강증/출석부)을 1장 이상 첨부해 주세요.', 'drop-zone'];
+      for (const k of EVAL_KEYS) if (!picks[k]) return [`수업 평가의 '${FORM_GROUPS[k].title}'을(를) 골라주세요.`, 'g-' + k];
+      if (!picks.teacherTags.length) return ['선생님 스타일을 1개 이상 골라주세요.', 'g-teacherTags'];
+      if (MBTI_KEYS.some(k => !picks[k])) return ['MBTI 네 줄을 모두 골라주세요. 잘 모르면 더 가까운 쪽이면 돼요.', 'mbti-box'];
+      if (!$('naesin-select').value) return ['내신 등급을 골라주세요. 해당이 없으면 "해당 없음"을 선택하세요.', 'naesin-select'];
+      if (!$('mock-select').value) return ['수능·모의고사 등급을 골라주세요. 아직 안 봤다면 "아직 안 봤어요"를 선택하세요.', 'mock-select'];
+      if (!picks.gradeChange) return ['학원에 다닌 뒤 성적 변화를 골라주세요.', 'g-gradeChange'];
+      if (!picks.homeworkDone) return ['숙제를 얼마나 해갔는지 골라주세요. 솔직하게 답해도 괜찮아요.', 'g-homeworkDone'];
+      if (!picks.lateness) return ['지각 여부를 골라주세요. 솔직하게 답해도 괜찮아요.', 'g-lateness'];
+      if (!rating) return ['최종 학원 만족도를 선택해 주세요.', 'star-group'];
+      if (!/^01[016789]\d{7,8}$/.test(phone)) return ['휴대폰 번호를 정확히 입력해 주세요. 예) 010-1234-5678', 'phone-input'];
+      if (!$('agree-input').checked) return ['[필수] 개인정보 수집에 동의해 주세요.', 'consent-box'];
+      if (!isParent() && !$('guardian-input').checked) return ['[필수] 만 14세 이상인지(또는 보호자 동의를 받았는지) 확인해 주세요.', 'consent-box'];
+      return null;
+    }
+
+    async function submitReview(e) {
+      e.preventDefault();
+      hideError();
+      const err = validateForm();
+      if (err) return showError(err[0], err[1]);
+
+      const parent = isParent();
+      const academyId = $('academy-select').value;
+      const a = findAcademy(academyId);
+      const payload = {
+        userType: parent ? '학부모' : '학생',
+        academyId, academyName: a ? a.name : academyId,
+
+        // 수강 정보
+        region: $('region-input').value.trim(),
+        schoolGrade: $('school-grade').value,
+        subjects: picks.subjects,
+        period: picks.period,
+
+        // 수업 평가
+        evaluation: {
+          homework: picks.homework, pace: picks.pace, difficulty: picks.difficulty, care: picks.care,
+          teacherTags: picks.teacherTags, academyTags: picks.academyTags,
+        },
+
+        // 학습 프로필 (추천용)
+        profile: {
+          mbti: MBTI_KEYS.map(k => picks[k]).join(''),
+          mbtiEI: picks.mbtiEI, mbtiSN: picks.mbtiSN, mbtiTF: picks.mbtiTF, mbtiJP: picks.mbtiJP,
+          naesin: $('naesin-select').value,
+          mock: $('mock-select').value,
+          gradeChange: picks.gradeChange,
+          homeworkDone: picks.homeworkDone,
+          lateness: picks.lateness,
+        },
+        consentRecommend: $('agree-reco').checked,
+
+        // 최종 만족도
+        rating, ratingLabel: RATING_LABELS[rating],
+        review: $('review-text').value.trim(),
+
+        phone: $('phone-input').value.replace(/[^0-9]/g, ''),
+        files: receiptFiles.map(f => ({ name: f.name, type: f.type, data: f.dataUrl.split(',')[1] })),
+        submittedAt: new Date().toISOString(),
+      };
+
+      const btn = $('submit-btn');
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 업로드 중...';
+
+      if (!CONFIG.UPLOAD_URL) {
+        // 테스트 모드: 실제 저장 없이 흐름만 확인 (개발자 도구 콘솔에서 전송될 데이터 확인 가능)
+        console.log('[테스트 모드] 전송될 데이터', { ...payload, files: payload.files.map(f => `${f.name} (${f.type})`) });
+        await new Promise(r => setTimeout(r, 600));
+        $('success-msg').textContent = '[테스트 모드] 실제로 저장되지는 않았습니다. CONFIG.UPLOAD_URL에 Apps Script 주소를 넣으면 구글 드라이브·시트에 저장됩니다.';
+        showSuccess();
+        return;
+      }
+
+      try {
+        // Content-Type을 지정하지 않아야(text/plain) 구글 Apps Script로 바로 보낼 수 있습니다.
+        const res = await fetch(CONFIG.UPLOAD_URL, { method: 'POST', body: JSON.stringify(payload) });
+        const out = await res.json();
+        if (!out.ok) throw new Error(out.error || 'unknown');
+        $('success-msg').textContent = parent
+          ? '관리자 검수 후 입력하신 번호로 스타벅스 아메리카노 기프티콘이 발송됩니다.'
+          : '관리자 검수 후 입력하신 번호로 올리브영 1만원 기프티콘이 발송됩니다.';
+        showSuccess();
+      } catch (err) {
+        btn.disabled = false; btn.textContent = '인증 요청 제출하기';
+        showError('제출하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 눌러주세요. 계속 안 되면 사진 장수를 줄여보세요.');
+        console.error(err);
+      }
+    }
+    function showSuccess() {
+      $('form-wrap').classList.add('hidden');
+      $('success-wrap').classList.remove('hidden');
+      $('modal-dialog').scrollTop = 0;
+    }
+
+    /* =====================================================================
+       🚀 시작
+       ===================================================================== */
+    (function init() {
+      // 학원 선택 목록
+      $('academy-select').innerHTML = '<option value="">학원을 선택하세요</option>' +
+        ACADEMIES.map(a => `<option value="${a.id}">${esc(a.name)} (${esc(a.region)})</option>`).join('');
+
+      // 리뷰 폼 구성
+      const regions = [...new Set([...ACADEMIES.map(a => a.region), ...EXTRA_REGIONS])];
+      $('region-list').innerHTML = regions.map(r => `<option value="${esc(r)}">`).join('');
+      buildEvalRows();
+      buildGradeSelects();
+      blankPicks(); renderAllGroups(); setRating(0);
+
+      $('review-form').addEventListener('click', e => {
+        const b = e.target.closest('.chip');
+        if (b) pickChip(b.dataset.key, b.dataset.v);
+      });
+      $('academy-select').addEventListener('change', prefillFromAcademy);
+      $('region-input').addEventListener('input', e => { e.target.dataset.touched = '1'; });
+      $('school-grade').addEventListener('change', onSchoolGradeChange);
+      $('mbti-quick').addEventListener('input', onMbtiQuick);
+      document.querySelectorAll('input[name="user_type"]').forEach(r => r.addEventListener('change', applyWhoLabels));
+
+      // 업로드: 클릭 선택 + 끌어다 놓기
+      const input = $('receipt-input'), zone = $('drop-zone');
+      input.addEventListener('change', () => { handleFiles(input.files); input.value = ''; });
+      ['dragenter', 'dragover'].forEach(t => zone.addEventListener(t, e => { e.preventDefault(); zone.classList.add('drop-active'); }));
+      ['dragleave', 'drop'].forEach(t => zone.addEventListener(t, e => { e.preventDefault(); zone.classList.remove('drop-active'); }));
+      zone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+
+      $('logo-link').href = homeHref();
+      $('logo-link').target = '_top';
+
+      // 상세 모드인지 확인 (구글 사이트 설정값 또는 ?academy=id)
+      const params = new URLSearchParams(location.search);
+      const detailId = CONFIG.DETAIL_ID || params.get('academy');
+      if (detailId && showDetail(detailId)) return;
+
+      renderList();
+      initOverviewMap();
+      $('search-input').addEventListener('input', e => { currentQuery = e.target.value; applyFilters(); });
+      applyFilters();
+    })();
+  </script>
+</body>
+</html>
